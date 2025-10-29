@@ -1,0 +1,2 @@
+# NppTextEffects
+Notepad++ plugin
