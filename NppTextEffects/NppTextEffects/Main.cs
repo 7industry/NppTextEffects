@@ -6,6 +6,8 @@ using System.Windows.Forms;
 using System.Text.RegularExpressions;
 using NppPluginNET;
 using System.Runtime.InteropServices;
+using static TextEffects.Utilities.KanaConverter;
+using TextEffects.Utilities;
 
 namespace TextEffects
 {
@@ -19,12 +21,17 @@ namespace TextEffects
         #region " StartUp/CleanUp "
         internal static void CommandMenuInit()
         {
+
+            // UTF-16_デコード
+
             PluginBase.SetCommand(0, "Escape Json", EscapeLiteral, new ShortcutKey(false, false, false, Keys.None));
             PluginBase.SetCommand(1, "Unescape Json", UnescapeLiteral, new ShortcutKey(false, false, false, Keys.None));
-            //PluginBase.SetCommand(4, "UTF-16_デコード", About, new ShortcutKey(false, false, false, Keys.None));
-            PluginBase.SetCommand(3, "Remove Duplicate Lines", Selection, new ShortcutKey(false, false, false, Keys.None));
-            PluginBase.SetCommand(4, "Text Statistics", GetByteCharCount, new ShortcutKey(false, false, false, Keys.None));
-            PluginBase.SetCommand(5, "About", About, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(2, "To Full-width", ConvertToFullWidth, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(3, "To Half-width", ConvertToHalfWidth, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(4, "To Furigana", ConvertKanjiToKana, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(5, "Remove Duplicate Lines", Selection, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(6, "Text Statistics", GetByteCharCount, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(7, "About", About, new ShortcutKey(false, false, false, Keys.None));
         }
         internal static void SetToolBarIcon()
         {
@@ -54,6 +61,15 @@ namespace TextEffects
         /// <returns>字符长度和字节长度</returns>
         internal static void GetByteCharCount()
         {
+            /*
+                // 获取当前活动编辑器的句柄
+                IntPtr scintillaHandle = PluginBase.GetCurrentScintilla();
+
+                // 获取内部默认编码 (CodePage)   默认编码页为  65001  UTF-8 
+                // 注意：SCI_GETCODEPAGE 消息返回的是 Scintilla 内部用于读取和写入文本的 CodePage ID
+                int codePageID = (int)Win32.SendMessage(scintillaHandle, SciMsg.SCI_GETCODEPAGE, 0, 0);
+            */
+
             StringBuilder message = new StringBuilder();
             // 1. ファイルのバイト列をすべて読み込む
             byte[] fileBytes;
@@ -67,25 +83,15 @@ namespace TextEffects
             catch (Exception)
             {
             }
-
-
-            // 您的目标输出字符串 Scintilla
-            IntPtr scintillaHandle = PluginBase.GetCurrentScintilla();
-
-            // 获取内部默认编码 (CodePage)   默认编码页为  65001  UTF-8 
-            // 注意：SCI_GETCODEPAGE 消息返回的是 Scintilla 内部用于读取和写入文本的 CodePage ID
-            int codePageID = (int)Win32.SendMessage(scintillaHandle, SciMsg.SCI_GETCODEPAGE, 0, 0);
-
-            // 获取正确的编码
-            Encoding targetEncoding = GetEncoding(codePageID);
+                       
 
             // 获取选中内容的字节长度
-            byte[] inputBytes = GetSelectionBytes(scintillaHandle);
+            byte[] inputBytes = GetSelectionBytes();
             int bl = inputBytes.Length;
             message.Append("Selection Bytes(UTF-8) : " + bl + "\r\n");
 
             // 获取选中内容的字符长度（包含终止符 \0）
-            string inputText = targetEncoding.GetString(inputBytes);
+            string inputText = Encoding.UTF8.GetString(inputBytes);
             int cl = inputText.Length;
             message.Append("Selection Characters   : " + cl);
 
@@ -97,19 +103,12 @@ namespace TextEffects
         #region " Menu functions Selection"
         internal static void Selection()
         {
-            // 您的目标输出字符串 Scintilla
+            // 获取当前活动编辑器的句柄
             IntPtr scintillaHandle = PluginBase.GetCurrentScintilla();
 
-            // 获取当前文档的编码 (CodePage)
-            // 注意：SCI_GETCODEPAGE 消息返回的是 Scintilla 内部用于读取和写入文本的 CodePage ID
-            int codePageID = (int)Win32.SendMessage(scintillaHandle, SciMsg.SCI_GETCODEPAGE, 0, 0);
-
-            // 获取正确的编码
-            Encoding targetEncoding = GetEncoding(codePageID);
-
             // 步骤 3: 根据检测到的编码从字节序列中获取正确的字符串
-            byte[] inputBytes = GetSelectionBytes(scintillaHandle);
-            string inputText = targetEncoding.GetString(inputBytes);
+            byte[] inputBytes = GetSelectionBytes();
+            string inputText = Encoding.UTF8.GetString(inputBytes);
 
             if (string.IsNullOrEmpty(inputText))
             {
@@ -165,7 +164,7 @@ namespace TextEffects
 
 
                 // 步骤 3: 字符串被编码为字节流
-                byte[] outputBytes = targetEncoding.GetBytes(outputStrin);
+                byte[] outputBytes = Encoding.UTF8.GetBytes(outputStrin);
 
                 // 为字节流分配非托管内存 (+1 是为了终止符 \0)
                 IntPtr outputPtr = Marshal.AllocHGlobal(outputBytes.Length + 1);
@@ -196,21 +195,18 @@ namespace TextEffects
         //public static string EscapeForCSharpLiteral(string input)
         internal static void EscapeLiteral()
         {
-            // 您的目标输出字符串 Scintilla
+            // 获取当前活动编辑器的句柄
             IntPtr scintillaHandle = PluginBase.GetCurrentScintilla();
 
-            // 获取当前文档的编码 (CodePage)
+          /*  // 获取当前文档的编码 (CodePage)
             // 注意：SCI_GETCODEPAGE 消息返回的是 Scintilla 内部用于读取和写入文本的 CodePage ID
             int codePageID = (int)Win32.SendMessage(scintillaHandle, SciMsg.SCI_GETCODEPAGE, 0, 0);
 
             // 设置 Scintilla 的 CodePage 为 (CodePage ID ) , 告诉 Scintilla 接下来接收到的字符串编码
-            Win32.SendMessage(scintillaHandle, SciMsg.SCI_SETCODEPAGE, codePageID, 0);
-
-            // 获取正确的编码
-            Encoding targetEncoding = GetEncoding(codePageID);
+            Win32.SendMessage(scintillaHandle, SciMsg.SCI_SETCODEPAGE, codePageID, 0);*/
 
             byte[] inputBytes = GetDocBytes(scintillaHandle);
-            string inputText = targetEncoding.GetString(inputBytes);
+            string inputText = Encoding.UTF8.GetString(inputBytes);
 
             // ----------------------------------------------------
             // 现在 documentText 变量中存储了当前文档的全部内容，编码已正确处理
@@ -240,12 +236,8 @@ namespace TextEffects
 
             //MessageBox.Show(escaped);
 
-            // 步骤 3: 字符串被编码为字节流
-            byte[] outputBytes = targetEncoding.GetBytes(escaped);  // escaped outputStrin
-
-
             // 替换文件内容
-            ReplaceText(scintillaHandle, outputBytes);
+            ReplaceDocumentText(escaped);
         }
 
         #endregion
@@ -258,18 +250,11 @@ namespace TextEffects
         /// <returns>还原后的原始字符串</returns>
         internal static void UnescapeLiteral()
         {
-            // 您的目标输出字符串 Scintilla
+            // 获取当前活动编辑器的句柄
             IntPtr scintillaHandle = PluginBase.GetCurrentScintilla();
 
-            // 获取当前文档的编码 (CodePage)
-            // 注意：SCI_GETCODEPAGE 消息返回的是 Scintilla 内部用于读取和写入文本的 CodePage ID
-            int codePageID = (int)Win32.SendMessage(scintillaHandle, SciMsg.SCI_GETCODEPAGE, 0, 0);
-
-            // 获取正确的编码
-            Encoding targetEncoding = GetEncoding(codePageID);
-
             byte[] inputBytes = GetDocBytes(scintillaHandle);
-            string inputText = targetEncoding.GetString(inputBytes);
+            string inputText = Encoding.UTF8.GetString(inputBytes);
 
             if (string.IsNullOrEmpty(inputText))
             {
@@ -320,17 +305,93 @@ namespace TextEffects
 
             //MessageBox.Show(result);
 
-            // 步骤 3: 字符串被编码为字节流
-            byte[] outputBytes = targetEncoding.GetBytes(result);  // escaped outputStrin
-
             // 替换文件内容
-            ReplaceText(scintillaHandle, outputBytes);
+            ReplaceDocumentText(result);
         }
 
         #endregion
 
 
+        #region " Menu functions JPReverse"
 
+        [STAThread]
+        internal static void ConvertKanjiToKana()
+        {
+            // 1. 获取当前选中的文本
+            string kanzi = GetSelectionText();
+
+            // **注意：在标准的NppPlugin.NET中，您可能需要使用 Npp.Editor.GetSelectedText()**
+            // 假设 GetSelectionText() 已经正确获取了选中文本
+
+            // 确定要替换的新文本 (这里以 IFELanguage 的结果为例)
+            string katakana = string.Empty;
+
+            IFELanguage ife = null;
+            try
+            {
+                // === 读音获取逻辑 (保持不变) ===
+                // Raw IFE Ver
+                ife = Activator.CreateInstance(Type.GetTypeFromProgID("MSIME.Japan")) as IFELanguage;
+                ife.Open();
+
+                // 假设 GetJMorphResult 成功，并将片假名读音赋值给 katakana 变量
+                // 这一步的 Marshal 操作非常底层且复杂，需要确保 result 指针的有效性
+                // 简单起见，我们直接使用 'katakana' 变量来承载结果
+                ife.GetJMorphResult(0x00030000, 0x00000008, kanzi.Length, kanzi, IntPtr.Zero, out IntPtr result);
+                katakana = Marshal.PtrToStringUni(Marshal.ReadIntPtr(result, 4), Marshal.ReadInt16(result, 8));
+
+                ReplaceSelectionText(katakana);
+                // （您原代码中 MessageBox.Show(katakana); 这一行可以用于调试，实际发布时应移除）
+                // 也可以选择使用更简单的 FELanguage Ver的结果
+                // FELanguage fe = new FELanguage();
+                // katakana = fe.GetKatakana(kanzi);
+
+                // 提示用户操作成功 (可选)
+                //MessageBox.Show($"元のテキスト: {kanzi}\n置換後: {katakana}", "日本語の読み仮名置換", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"読み仮名の取得または置換に失敗しました。\nエラー: {ex.Message}", "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                ife?.Close();
+            }
+        }
+
+        #endregion
+
+
+        #region " Menu functions Half-width to Full-width Conversion"
+        //  全角文字（英数字、スペース、カタカナ）を半角に変換します。
+        internal static void ConvertToFullWidth()
+        {
+            // 获取当前选中的文本
+            string kanzi = GetSelectionText();
+
+            string katakana = TextConverter.ToFullWidth(kanzi);
+
+            ReplaceSelectionText(katakana);
+        }
+
+        #endregion
+
+
+        #region " Menu functions Full-width to half-width conversion"
+        //  全角文字（英数字、スペース、カタカナ）を半角に変換します。
+        internal static void ConvertToHalfWidth()
+        {
+            // 获取当前选中的文本
+            string kanzi = GetSelectionText();
+
+            string katakana = TextConverter.ToHalfWidth(kanzi);
+
+            ReplaceSelectionText(katakana);
+        }
+
+        #endregion
+
+        
 
         #region " Private functions "
 
@@ -408,10 +469,10 @@ namespace TextEffects
         /// 获取选中内容
         /// </summary>
         /// <returns>字节数组</returns>
-        private static byte[] GetSelectionBytes(IntPtr scintillaHandle)
+        private static byte[] GetSelectionBytes()
         { 
             // 1. 获取选中内容的长度（包含终止符 \0）
-            int selectionLength = (int)Win32.SendMessage(scintillaHandle, SciMsg.SCI_GETSELTEXT, 0, 0);
+            int selectionLength = (int)Win32.SendMessage(PluginBase.GetCurrentScintilla(), SciMsg.SCI_GETSELTEXT, 0, 0);
 
             /* 
              StringBuilder inputText = new StringBuilder(selectionLength);
@@ -422,7 +483,7 @@ namespace TextEffects
             IntPtr selectionPtr = Marshal.AllocHGlobal(selectionLength);
 
             // 3. 将选中的文本复制到非托管内存中
-            Win32.SendMessage(scintillaHandle, SciMsg.SCI_GETSELTEXT, 0, selectionPtr);
+            Win32.SendMessage(PluginBase.GetCurrentScintilla(), SciMsg.SCI_GETSELTEXT, 0, selectionPtr);
 
             // 4. 从非托管内存指针 (IntPtr) 中读取字节数组
             // 注意：selectionLength 包含了终止符 \0，读取时需要减去 1
@@ -441,6 +502,24 @@ namespace TextEffects
             return buffer;
         }
 
+
+        /// <summary>
+        /// 获取选中内容
+        /// </summary>
+        /// <returns>字节数组</returns>
+        private static string GetSelectionText()
+        {
+            // 注意：SCI_GETCODEPAGE 消息返回的是 Scintilla 内部用于读取和写入文本的 CodePage ID
+            int codePageID = (int)Win32.SendMessage(PluginBase.GetCurrentScintilla(), SciMsg.SCI_GETCODEPAGE, 0, 0);
+
+            // 获取选中内容的字节长度
+            byte[] inputBytes = GetSelectionBytes();
+
+            // 步骤 3: 根据检测到的编码从字节序列中获取正确的字符串
+            string inputText = Encoding.UTF8.GetString(inputBytes);
+
+            return inputText;
+        }
 
         /// <summary>
         /// 获取编码
@@ -478,12 +557,35 @@ namespace TextEffects
             return targetEncoding;
         }
 
+        /// <summary>
+        /// 替换选中文件内容
+        /// </summary>
+        private static void ReplaceSelectionText(string result)
+        {
+            // 字符串被编码为字节流
+            byte[] outputBytes = Encoding.UTF8.GetBytes(result);
+            WriteBytes(outputBytes, SciMsg.SCI_REPLACESEL);
+        }
 
         /// <summary>
-        /// 替换文件内容
+        /// 替换整个文件内容
         /// </summary>
-        private static void ReplaceText(IntPtr scintillaHandle, byte[] outputBytes)
+        private static void ReplaceDocumentText(string result)
         {
+            // 字符串被编码为字节流
+            byte[] outputBytes = Encoding.UTF8.GetBytes(result);
+            WriteBytes(outputBytes, SciMsg.SCI_SETTEXT);
+        }
+
+        private static void WriteBytes(byte[] outputBytes, SciMsg writeType)
+        {
+            // 使用 Notepad++ 插件框架提供的替换方法
+            // 假设您已经能够访问到主编辑器对象（如 Npp.Editor 或 Scintilla 接口）
+            // 方法A: 使用 Editor 对象的 ReplaceSelection 方法 (如果框架提供)
+            // Npp.Editor.ReplaceSelection(katakana); 
+
+            // 方法B: 直接发送 Scintilla 消息
+
             // 3. 为字节流分配非托管内存
             // 分配的长度 = 字节流长度 + 1 (用于 C 风格的终止符 '\0')
             IntPtr outputPtr = IntPtr.Zero; // 初始化指针
@@ -501,12 +603,10 @@ namespace TextEffects
                 Marshal.WriteByte(outputPtr, outputBytes.Length, 0);
 
                 // 6. 发送 替换 消息到 Scintilla
-                // 替换当前选中区域（插入）
+                // 替换当前选中区域（插入）  SciMsg.SCI_REPLACESEL
+                // 替换整个文件内容          SciMsg.SCI_SETTEXT
                 // Win32.SendMessage(scintillaHandle, SciMsg.SCI_REPLACESEL, 0, outputPtr);
-
-                // 替换整个文件内容（如果您想改为此功能）
-                Win32.SendMessage(scintillaHandle, SciMsg.SCI_SETTEXT, 0, outputPtr);
-
+                Win32.SendMessage(PluginBase.GetCurrentScintilla(), writeType, 0, outputPtr);
             }
             finally
             {
@@ -518,6 +618,11 @@ namespace TextEffects
             }
         }
 
+
         #endregion
     }
+
+
+
+
 }
