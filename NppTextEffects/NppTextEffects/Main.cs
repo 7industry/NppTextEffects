@@ -6,8 +6,9 @@ using System.Windows.Forms;
 using System.Text.RegularExpressions;
 using NppPluginNET;
 using System.Runtime.InteropServices;
-using static TextEffects.Utilities.KanaConverter;
 using TextEffects.Utilities;
+using TextEffects.Forms;
+using static TextEffects.Utilities.KanaConverter;
 
 namespace TextEffects
 {
@@ -21,7 +22,7 @@ namespace TextEffects
         #region " StartUp/CleanUp "
         internal static void CommandMenuInit()
         {
-
+            // 注册新的菜单项：菜单名 | 函数名 | 快捷键 | 是否检查状态
             // UTF-16_デコード
 
             PluginBase.SetCommand(0, "Escape Json", EscapeLiteral, new ShortcutKey(false, false, false, Keys.None));
@@ -46,10 +47,26 @@ namespace TextEffects
         #region " Menu functions About"
         internal static void About()
         {
-            var ss = " To Remove all visible Duplicate lines Remove Whitespace first\n              Edit > Blank Operations > Trim Trailing Space \n\n       ****** Remove Duplicate lines Except Empty lines ******  \n                                       build by G. Singh  \n                                  29-10-2019 build 1.3.0.0  ";
-            MessageBox.Show(ss);
-        }
+            StringBuilder about = new StringBuilder();
+            about.AppendLine();
+            //about.AppendLine("TextEffects");
+            about.AppendLine("Author:   Ladder Chin");
+            about.AppendLine();
+            about.AppendLine("Version:  1.0");
+            about.AppendLine();
+            about.AppendLine("Licence:  GPL");
 
+
+            // 2. 实例化自定义对话框，并传递要显示的内容
+            // 关键词 'using' 确保 customBox 资源在退出块时被释放
+            using (var customBox = new AboutForm())
+            {
+                customBox.SetContentLabel(about.ToString());
+
+                // 3. 使用 ShowDialog() 模态显示自定义窗体
+                DialogResult result = customBox.ShowDialog();
+            }
+        }
         #endregion
 
         #region " Menu functions GetByteCount"
