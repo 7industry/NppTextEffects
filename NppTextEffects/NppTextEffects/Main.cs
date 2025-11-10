@@ -22,32 +22,34 @@ namespace TextEffects
         internal static void CommandMenuInit()
         {
             // 注册新的菜单项：菜单名 | 函数名 | 快捷键 | 是否检查状态
-            PluginBase.SetCommand(0, "Escape Json", EscapeLiteral, new ShortcutKey(false, false, false, Keys.None));
-            PluginBase.SetCommand(1, "Unescape Json", UnescapeLiteral, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(0, "Escape", EscapeLiteral, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(1, "Unescape", UnescapeLiteral, new ShortcutKey(false, false, false, Keys.None));
 
             // 区切り線
             PluginBase.SetCommand(2, "---", null);
 
-            PluginBase.SetCommand(3, "To Full-width", ConvertToFullWidth, new ShortcutKey(false, false, false, Keys.None));
-            PluginBase.SetCommand(4, "To Half-width", ConvertToHalfWidth, new ShortcutKey(false, false, false, Keys.None));
-            PluginBase.SetCommand(5, "To Furigana", ConvertKanjiToKana, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(3, "Katakana To Hiragana", ConvertKatakanaToHiragana, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(4, "Hiragana To Katakana", ConvertHiraganaToKatakana, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(5, "To Half-width", ConvertToHalfWidth, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(6, "To Full-width", ConvertToFullWidth, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(7, "To Furigana", ConvertKanjiToKana, new ShortcutKey(false, false, false, Keys.None));
 
             // 区切り線
-            // UTF-16_デコード
-            PluginBase.SetCommand(6, "---", null);
-            PluginBase.SetCommand(7, "To Code Point", ConvertToCodePoint, new ShortcutKey(false, false, false, Keys.None));
-            PluginBase.SetCommand(8, "From Code Point", FromCodePoint, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(8, "---", null);
+            PluginBase.SetCommand(9, "To Code Point", ConvertToCodePoint, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(10, "From Code Point", FromCodePoint, new ShortcutKey(false, false, false, Keys.None));
 
             // 区切り線
-            PluginBase.SetCommand(9, "---", null);
+            PluginBase.SetCommand(11, "---", null);
 
-            PluginBase.SetCommand(10, "Remove Duplicate Lines", Selection, new ShortcutKey(false, false, false, Keys.None));
-            PluginBase.SetCommand(11, "Text Statistics", GetByteCharCount, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(12, "Remove Duplicate Lines", Selection, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(13, "Text Statistics", GetByteCharCount, new ShortcutKey(false, false, false, Keys.None));
 
             // 区切り線
-            PluginBase.SetCommand(12, "---", null);
-            PluginBase.SetCommand(13, "About", About, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(14, "---", null);
+            PluginBase.SetCommand(15, "About", About, new ShortcutKey(false, false, false, Keys.None));
         }
+
         internal static void SetToolBarIcon()
         {
 
@@ -118,13 +120,26 @@ namespace TextEffects
 
             // 获取选中内容的字节长度
             byte[] inputBytes = GetSelectionBytes();
-            int bl = inputBytes.Length;
-            message.Append("Selection Bytes(UTF-8) : " + bl + "\r\n");
+            int utf8ByteLength = inputBytes.Length;
 
             // 获取选中内容的字符长度（包含终止符 \0）
             string inputText = Encoding.UTF8.GetString(inputBytes);
-            int cl = inputText.Length;
-            message.Append("Selection Characters   : " + cl);
+            int characterLength = inputText.Length;
+
+            // 1. Shift_JISエンコーディングを取得
+            // ※ 環境によっては、事前に Encoding.RegisterProvider(CodePagesEncodingProvider.Instance); が必要です。
+            Encoding sjis = Encoding.GetEncoding("Shift_JIS");
+
+            // 2. Shift_JISでエンコードし直し、バイト配列を取得
+            byte[] sjisBytes = sjis.GetBytes(inputText);
+
+            // 3. バイト配列の長さを取得
+            int sjisByteLength = sjisBytes.Length;
+
+            // 結果を message に追加
+            message.Append("Selection Characters   : " + characterLength + "\r\n");
+            message.Append("Selection Bytes(UTF-8) : " + utf8ByteLength + "\r\n");
+            message.Append("Selection Bytes(Shift_JIS) : " + sjisByteLength);
 
             MessageBox.Show(message.ToString());
         }
@@ -416,6 +431,40 @@ namespace TextEffects
             string kanzi = GetSelectionText();
 
             string katakana = TextConverter.ToHalfWidth(kanzi);
+
+            ReplaceSelectionText(katakana);
+        }
+
+        #endregion
+
+
+        #region " Menu functions Hiragana To Katakana"
+        /// <summary>
+        /// 平仮名をカタカナに変換します。
+        /// </summary>
+        internal static void ConvertHiraganaToKatakana()
+        {
+            // 获取当前选中的文本
+            string kanzi = GetSelectionText();
+
+            string katakana = TextConverter.ConvertHiraganaToKatakana(kanzi);
+
+            ReplaceSelectionText(katakana);
+        }
+
+        #endregion
+
+
+        #region " Menu functions Katakana To Hiragana"
+        /// <summary>
+        /// カタカナを平仮名に変換します。
+        /// </summary>
+        internal static void ConvertKatakanaToHiragana()
+        {
+            // 获取当前选中的文本
+            string kanzi = GetSelectionText();
+
+            string katakana = TextConverter.ConvertKatakanaToHiragana(kanzi);
 
             ReplaceSelectionText(katakana);
         }

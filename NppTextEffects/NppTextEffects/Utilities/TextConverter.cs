@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace TextEffects.Utilities
@@ -11,18 +9,17 @@ namespace TextEffects.Utilities
     /// </summary>
     public static class TextConverter
     {
-
         // 全角字符对照表（与原函数 zenKana1 に対応）
-        private const string ZenkakuMap1 = "ヲァィゥェォャュョッーアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン";
+        private const string FullKatakanaSet1 = "ヲァィゥェォャュョッーアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン";
 
         // 濁点・半濁点付き全角カタカナ对照表（と原函数 zenkana2 に対応）
-        private const string ZenkakuMap2 = "ヴガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポ";
+        private const string FullKatakanaSet2 = "ヴガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポ";
 
         // 半角字符对照表（と原函数 hanKanaArray1 に対応）
-        private static readonly char[] HankakuMapArray1 = "ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ".ToCharArray();
+        private static readonly char[] HalfKatakanaArray1 = "ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ".ToCharArray();
 
         // 濁点・半濁点付き半角カタカナ（と原函数 hanKanaArray2 に対応）
-        private static readonly char[] HankakuMapArray2 = "ｳﾞｶﾞｷﾞｸﾞｹﾞｺﾞｻﾞｼﾞｽﾞｾﾞｿﾞﾀﾞﾁﾞﾂﾞﾃﾞﾄﾞﾊﾞﾋﾞﾌﾞﾍﾞﾎﾞﾊﾟﾋﾟﾌﾟﾍﾟﾎﾟ".ToCharArray();
+        private static readonly char[] HalfKatakanaMapArray2 = "ｳﾞｶﾞｷﾞｸﾞｹﾞｺﾞｻﾞｼﾞｽﾞｾﾞｿﾞﾀﾞﾁﾞﾂﾞﾃﾞﾄﾞﾊﾞﾋﾞﾌﾞﾍﾞﾎﾞﾊﾟﾋﾟﾌﾟﾍﾟﾎﾟ".ToCharArray();
 
 
         // === 1. 半角から全角への変換 ===
@@ -41,7 +38,6 @@ namespace TextEffects.Utilities
 
             StringBuilder sb = new StringBuilder(halfWidthString.Length);
 
-            //foreach (char c in halfWidthString)
             for (int i = 0; i < halfWidthString.Length; i++)
             {
                 char currentChar = halfWidthString[i];
@@ -90,15 +86,15 @@ namespace TextEffects.Utilities
 
                         // HankakuMapArray2 を2文字ずつインクリメントしながら検索
                         // i/2 は ZenkakuMap2 のインデックスに対応
-                        for (int j = 0; j < HankakuMapArray2.Length; j += 2)
+                        for (int j = 0; j < HalfKatakanaMapArray2.Length; j += 2)
                         {
-                            if (HankakuMapArray2[j] == currentChar && HankakuMapArray2[j + 1] == nextChar)
+                            if (HalfKatakanaMapArray2[j] == currentChar && HalfKatakanaMapArray2[j + 1] == nextChar)
                             {
                                 // 2文字がマッチした場合
                                 int zenkakuIndex = j / 2;
 
                                 // 対応する全角文字 ZenkakuMap2[j/2] を結果に追加
-                                sb.Append(ZenkakuMap2[zenkakuIndex]);
+                                sb.Append(FullKatakanaSet2[zenkakuIndex]);
 
                                 // 2文字分進めたので、ループインデックスも1つ飛ばす
                                 i++;
@@ -168,7 +164,7 @@ namespace TextEffects.Utilities
                 // ----------------------------------------------------
                 // 3. 全角カタカナの変換
                 // ----------------------------------------------------
-                else if (c >= 'ァ' && c <= 'ヶ')
+                else if (c >= 'ァ' && c <= 'ー')
                 {
                     // 全角カタカナの処理は複雑なため、ここでは省略し、
                     // 詳細なマッピング関数を使用することを推奨します。
@@ -188,6 +184,83 @@ namespace TextEffects.Utilities
         }
 
 
+        /// <summary>
+        /// 平仮名をカタカナに変換します。
+        /// </summary>
+        /// <param name="hiragana">半角カタカナ文字</param>
+        /// <returns>対応する全角文字。</returns>
+        public static string ConvertHiraganaToKatakana(string hiragana)
+        {
+
+            if (string.IsNullOrEmpty(hiragana))
+            {
+                return hiragana;
+            }
+
+            StringBuilder sb = new StringBuilder(hiragana.Length);
+
+            foreach (char c in hiragana)
+            {
+                // 全角ひらがな (U+3041～U+3093) の範囲内かチェック
+                if (c >= 'ぁ' && c <= 'ん')
+                {
+                    // ひらがなとカタカナのコード差分（オフセット）は 0x0060 (96)
+                    sb.Append((char)(c + 0x0060));
+                }
+                // ----------------------------------------------------
+                // その他（上記以外）
+                // ----------------------------------------------------
+                else
+                {
+                    // それ以外の文字はそのまま保持
+                    sb.Append(c);
+                }
+
+            }
+
+            return sb.ToString();
+        }
+
+
+
+        /// <summary>
+        /// カタカナを平仮名に変換します。
+        /// </summary>
+        /// <param name="hiragana">半角カタカナ文字</param>
+        /// <returns>対応する全角文字。</returns>
+        public static string ConvertKatakanaToHiragana(string katagana)
+        {
+
+            if (string.IsNullOrEmpty(katagana))
+            {
+                return katagana;
+            }
+
+            StringBuilder sb = new StringBuilder(katagana.Length);
+
+            foreach (char c in katagana)
+            {
+                // 'ァ' (U+30A1) から 'ン' (U+30F3) までが基本範囲
+                if (c >= 'ァ' && c <= 'ン')
+                {
+                    // ひらがなとカタカナのコード差分（オフセット）は 0x0060 (96)
+                    sb.Append((char)(c - 0x0060));
+                }
+                // ----------------------------------------------------
+                // その他（上記以外）
+                // ----------------------------------------------------
+                else
+                {
+                    // それ以外の文字はそのまま保持
+                    sb.Append(c);
+                }
+
+            }
+
+            return sb.ToString();
+        }
+
+
         // ==========================================================
         // 補助関数 (カタカナの処理はマッピングが必要で複雑なため、ダミーまたは外部ライブラリを推奨)
         // ==========================================================
@@ -201,12 +274,12 @@ namespace TextEffects.Utilities
         private static char ConvertHalfKanaToFullKana(char halfKana)
         {
             // --- 1. Map 1 (清音、小文字、長音符など) の処理 ---
-            int index1 = Array.IndexOf(HankakuMapArray1, halfKana);
+            int index1 = Array.IndexOf(HalfKatakanaArray1, halfKana);
 
             if (index1 >= 0)
             {
                 // 変換表1 にマッチした場合、1文字の全角文字に変換
-                return ZenkakuMap1[index1];
+                return FullKatakanaSet1[index1];
             }
 
             /*// --- 2. 濁点・半濁点単体の処理 ---
@@ -241,26 +314,26 @@ namespace TextEffects.Utilities
             int index;
 
             // --- 1. Map 1 (清音、小文字、長音符など) の処理 ---
-            index = ZenkakuMap1.IndexOf(fullChar);
+            index = FullKatakanaSet1.IndexOf(fullChar);
             if (index >= 0)
             {
                 // 変換表1 にマッチした場合、1文字の半角文字に変換
-                resultBuilder.Append(HankakuMapArray1[index]);
+                resultBuilder.Append(HalfKatakanaArray1[index]);
                 return resultBuilder.ToString();
             }
 
             // --- 2. Map 2 (濁点・半濁点付きカタカナ) の処理 ---
-            index = ZenkakuMap2.IndexOf(fullChar);
+            index = FullKatakanaSet2.IndexOf(fullChar);
             if (index >= 0)
             {
                 // 変換表2 にマッチした場合、2文字の半角表現に分解
                 // 例: 'ガ' → 'ｶ' + 'ﾞ' (ただし HankakuMapArray2 の格納形式による)
 
                 // 最初の半角文字を取得 (index * 2)
-                resultBuilder.Append(HankakuMapArray2[index * 2]);
+                resultBuilder.Append(HalfKatakanaMapArray2[index * 2]);
 
                 // 2番目の半角文字（濁点/半濁点など）を取得 (index * 2 + 1)
-                resultBuilder.Append(HankakuMapArray2[index * 2 + 1]);
+                resultBuilder.Append(HalfKatakanaMapArray2[index * 2 + 1]);
 
                 return resultBuilder.ToString();
             }
