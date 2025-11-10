@@ -8,7 +8,6 @@ using NppPluginNET;
 using System.Runtime.InteropServices;
 using TextEffects.Utilities;
 using TextEffects.Forms;
-using static TextEffects.Utilities.KanaConverter;
 
 namespace TextEffects
 {
@@ -23,16 +22,31 @@ namespace TextEffects
         internal static void CommandMenuInit()
         {
             // 注册新的菜单项：菜单名 | 函数名 | 快捷键 | 是否检查状态
-            // UTF-16_デコード
-
             PluginBase.SetCommand(0, "Escape Json", EscapeLiteral, new ShortcutKey(false, false, false, Keys.None));
             PluginBase.SetCommand(1, "Unescape Json", UnescapeLiteral, new ShortcutKey(false, false, false, Keys.None));
-            PluginBase.SetCommand(2, "To Full-width", ConvertToFullWidth, new ShortcutKey(false, false, false, Keys.None));
-            PluginBase.SetCommand(3, "To Half-width", ConvertToHalfWidth, new ShortcutKey(false, false, false, Keys.None));
-            PluginBase.SetCommand(4, "To Furigana", ConvertKanjiToKana, new ShortcutKey(false, false, false, Keys.None));
-            PluginBase.SetCommand(5, "Remove Duplicate Lines", Selection, new ShortcutKey(false, false, false, Keys.None));
-            PluginBase.SetCommand(6, "Text Statistics", GetByteCharCount, new ShortcutKey(false, false, false, Keys.None));
-            PluginBase.SetCommand(7, "About", About, new ShortcutKey(false, false, false, Keys.None));
+
+            // 区切り線
+            PluginBase.SetCommand(2, "---", null);
+
+            PluginBase.SetCommand(3, "To Full-width", ConvertToFullWidth, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(4, "To Half-width", ConvertToHalfWidth, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(5, "To Furigana", ConvertKanjiToKana, new ShortcutKey(false, false, false, Keys.None));
+
+            // 区切り線
+            // UTF-16_デコード
+            PluginBase.SetCommand(6, "---", null);
+            PluginBase.SetCommand(7, "To Code Point", ConvertToCodePoint, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(8, "From Code Point", FromCodePoint, new ShortcutKey(false, false, false, Keys.None));
+
+            // 区切り線
+            PluginBase.SetCommand(9, "---", null);
+
+            PluginBase.SetCommand(10, "Remove Duplicate Lines", Selection, new ShortcutKey(false, false, false, Keys.None));
+            PluginBase.SetCommand(11, "Text Statistics", GetByteCharCount, new ShortcutKey(false, false, false, Keys.None));
+
+            // 区切り線
+            PluginBase.SetCommand(12, "---", null);
+            PluginBase.SetCommand(13, "About", About, new ShortcutKey(false, false, false, Keys.None));
         }
         internal static void SetToolBarIcon()
         {
@@ -343,12 +357,12 @@ namespace TextEffects
             // 确定要替换的新文本 (这里以 IFELanguage 的结果为例)
             string katakana = string.Empty;
 
-            IFELanguage ife = null;
+            KanaConverter.IFELanguage ife = null;
             try
             {
                 // === 读音获取逻辑 (保持不变) ===
                 // Raw IFE Ver
-                ife = Activator.CreateInstance(Type.GetTypeFromProgID("MSIME.Japan")) as IFELanguage;
+                ife = Activator.CreateInstance(Type.GetTypeFromProgID("MSIME.Japan")) as KanaConverter.IFELanguage;
                 ife.Open();
 
                 // 假设 GetJMorphResult 成功，并将片假名读音赋值给 katakana 变量
@@ -408,8 +422,33 @@ namespace TextEffects
 
         #endregion
 
-        
 
+        #region " Menu functions ConvertToCodePoint"
+        internal static void ConvertToCodePoint()
+        {
+            // 获取当前选中的文本
+            string kanzi = GetSelectionText();
+
+            string katakana = CodepointConverter.GetCodePointsFromString(kanzi);
+
+            ReplaceSelectionText(katakana);
+        }
+
+        #endregion
+
+
+        #region " Menu functions From Code Point"
+        internal static void FromCodePoint()
+        {
+            // 获取当前选中的文本
+            string kanzi = GetSelectionText();
+
+            string katakana = CodepointConverter.GetStringFromCodePoints(kanzi);
+
+            ReplaceSelectionText(katakana);
+        }
+
+        #endregion
         #region " Private functions "
 
 
